@@ -71,8 +71,8 @@ async fn main() {
                 center: canon_pos,
                 radius: BALL_RADIUS,
                 color: WHITE,
-                velocity: vec2(-angle.sin(), angle.cos()) * 300.,
-                mass: 1.,
+                velocity: vec2(-angle.sin(), angle.cos()) * 700.,
+                mass: 0.7,
                 in_bound: true,
             };
             balls.push(new_ball);
@@ -283,14 +283,12 @@ impl Ball {
         let dir = self.center - other.center;
         let dir = dir.normalize();
 
-        let rel_vel = self.velocity - other.velocity;
-
-        self.center -= dir * strength / 2.;
-        other.center += dir * strength / 2.;
+        // self.center -= dir * strength / 2.;
+        // other.center += dir * strength / 2.;
 
         let total_mass = self.mass + other.mass;
 
-        self.velocity -= strength * dir * (other.mass / total_mass) * 2. / get_frame_time();
-        other.velocity += strength * dir * (other.mass / total_mass) * 2. / get_frame_time();
+        self.velocity -= strength * dir * (total_mass / self.mass) * 2. ;
+        other.velocity += strength * dir * (total_mass / other.mass) * 2. ;
     }
 }
