@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, time::Duration};
 
 use macroquad::{miniquad::window::set_window_size, prelude::*, window};
 use serde::{Deserialize, Serialize};
@@ -71,7 +71,7 @@ async fn main() {
                 center: canon_pos,
                 radius: BALL_RADIUS,
                 color: WHITE,
-                velocity: vec2(-angle.sin(), angle.cos()) * 20.,
+                velocity: vec2(-angle.sin(), angle.cos()) * 300.,
                 mass: 1.,
                 in_bound: true,
             };
@@ -184,7 +184,7 @@ async fn main() {
         for ball in &balls {
             ball.draw();
         }
-
+        // std::thread::sleep(Duration::from_secs_f32(0.1));
         next_frame().await
     }
 }
@@ -247,20 +247,16 @@ impl Ball {
         draw_circle(self.center.x, self.center.y, self.radius, self.color);
     }
     fn move_kinematic(&mut self) {
-        const GRAVITY: f32 = 7.;
+        const GRAVITY: f32 = 70.;
         let Vec2 { x, y } = self.velocity;
-        let y = y + GRAVITY * get_frame_time();
+        let y = y + GRAVITY * get_frame_time() / 2.;
 
         self.velocity = vec2(x, y);
-
-        self.center += self.velocity;
+        self.center += self.velocity * get_frame_time();
+        let y = y + GRAVITY * get_frame_time() / 2.;
+        self.velocity = vec2(x, y);
     }
     fn bounce_walls(&mut self) {
-        // if self.center.y > screen_height()() - MAIN_BALL_RADIUS {
-        //     self.velocity.y *= -1.;
-        //     self.center.y = screen_height()() - MAIN_BALL_RADIUS;
-        // }
-
         if self.center.y < self.radius + WALL_THICKNESS {
             self.velocity.y *= -1.;
             self.center.y = self.radius + WALL_THICKNESS;
@@ -287,12 +283,14 @@ impl Ball {
         let dir = self.center - other.center;
         let dir = dir.normalize();
 
+        let rel_vel = self.velocity - other.velocity;
+
+        self.center -= dir * strength / 2.;
+        other.center += dir * strength / 2.;
+
         let total_mass = self.mass + other.mass;
 
-        self.velocity.x -= strength * dir.x * (other.mass / total_mass) * 2.;
-        other.velocity.x += strength * dir.x * (self.mass / total_mass) * 2.;
-
-        self.velocity.y -= strength * dir.y * (other.mass / total_mass) * 2.;
-        other.velocity.y += strength * dir.y * (self.mass / total_mass) * 2.;
+        self.velocity -= strength * dir * (other.mass / total_mass) * 2. / get_frame_time();
+        other.velocity += strength * dir * (other.mass / total_mass) * 2. / get_frame_time();
     }
 }
