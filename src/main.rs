@@ -300,15 +300,13 @@ impl Ball {
         let dir = self.center - other.center;
         let dir = dir.normalize();
 
-        self.center -= dir * strength / 2.;
-        other.center += dir * strength / 2.;
+        // self.center -= dir * strength / 2.;
+        // other.center += dir * strength / 2.;
 
-        let u1 = self.velocity;
-        let u2 = other.velocity;
-        let m1 = self.mass;
-        let m2 = other.mass;
+        let total_mass = self.mass + other.mass;
 
-        self.velocity = ((m1 - m2) / (m1 + m2)) * u1 + ((2. * m2) / (m1 + m2)) * u2;
-        other.velocity = ((m2 - m1) / (m1 + m2)) * u2 + ((2. * m1) / (m1 + m2)) * u1;
+        self.velocity -= strength * dir * (total_mass / self.mass) * 2. ;
+        other.velocity += strength * dir * (total_mass / other.mass) * 2. ;
+    
     }
 }
