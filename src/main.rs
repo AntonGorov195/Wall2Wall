@@ -1,10 +1,13 @@
-use std::{env, time::Duration};
-
+use std::{env, f32::consts::PI, time::Duration};
+//
 use macroquad::{miniquad::window::set_window_size, prelude::*, window};
 use serde::{Deserialize, Serialize};
 const WALL_THICKNESS: f32 = 30.;
 const MAIN_BALL_RADIUS: f32 = 50.;
+const MAIN_BALL_MASS: f32 = 2.;
+const MAIN_BALL_GRAVITY_MULT: f32 = 1.5;
 const BALL_RADIUS: f32 = 20.;
+const GRAVITY: f32 = 70.;
 
 pub enum Current {
     None,
@@ -64,6 +67,10 @@ async fn main() {
     println!("{:?}", screen_width());
     let mut main_ball: Ball = spawn_main_ball();
     let mut show_message = true;
+    let canon_texture = Texture2D::from_image(
+        &Image::from_file_with_format(include_bytes!("../assets/canon.png"), None)
+            .expect("failed to load image"),
+    );
     loop {
         let angle = canon_angle(canon_pos);
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -77,7 +84,11 @@ async fn main() {
             };
             balls.push(new_ball);
         }
-        main_ball.move_kinematic();
+        let mut gravity = GRAVITY;
+        if balls.len() > 4 {
+            gravity = (MAIN_BALL_GRAVITY_MULT).powi((balls.len() - 4) as i32) * GRAVITY;
+        }
+        main_ball.move_kinematic(gravity);
 
         // ceil
         if main_ball.center.y < main_ball.radius + WALL_THICKNESS {
@@ -127,7 +138,7 @@ async fn main() {
         }
 
         for ball in &mut balls {
-            ball.move_kinematic();
+            ball.move_kinematic(GRAVITY);
             ball.bounce_walls();
             ball.bounce_balls(&mut main_ball);
 
@@ -152,23 +163,12 @@ async fn main() {
             b: 0.9,
             a: 1.,
         });
-        draw_rectangle_ex(
-            canon_pos.x + 10.,
-            canon_pos.y,
-            20.,
-            150.,
-            DrawRectangleParams {
-                offset: vec2(0., 0.),
-                rotation: angle,
-                color: WHITE,
-            },
-        );
         if show_message {
             draw_text(
                 "Have the red ball hit the green wall to earn points.",
-                300.,
+                100.,
                 250.,
-                30.,
+                28.,
                 Color::new(0., 0., 0., 0.4),
             );
         }
@@ -184,7 +184,18 @@ async fn main() {
         for ball in &balls {
             ball.draw();
         }
-        // std::thread::sleep(Duration::from_secs_f32(0.1));
+
+        draw_texture_ex(
+            &canon_texture,
+            canon_pos.x - 50.,
+            canon_pos.y - 128.,
+            WHITE,
+            DrawTextureParams {
+                rotation: PI + angle,
+                dest_size: Some(vec2(100., 200.)),
+                ..Default::default()
+            },
+        );
         next_frame().await
     }
 }
@@ -196,32 +207,39 @@ fn increment_score(score: &mut u32, best_score: &mut u32) {
     }
 }
 fn load() -> u32 {
-    let data = dirs::data_local_dir()
-        .expect("Local data dir not found.")
-        .join("Wall 2 Wall")
-        .join("save.json");
-    let data = std::fs::read(data);
-    match data {
-        Ok(data) => {
-            let data: SaveDate =
-                serde_json::from_slice(&data).expect("Failed to deserialize save file.");
-            return data.score;
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let data = dirs::data_local_dir()
+            .expect("Local data dir not found.")
+            .join("Wall 2 Wall")
+            .join("save.json");
+        let data = std::fs::read(data);
+        match data {
+            Ok(data) => {
+                let data: SaveDate =
+                    serde_json::from_slice(&data).expect("Failed to deserialize save file.");
+                return data.score;
+            }
+            Err(_) => return 0,
         }
-        Err(_) => return 0,
     }
+    0
 }
 fn save(score: u32) {
-    let data = SaveDate { score: score };
-    let path = dirs::data_local_dir()
-        .expect("Local data dir not found.")
-        .join("Wall 2 Wall");
-    std::fs::create_dir_all(&path).expect("Failed to create dir.");
-    let path = path.join("save.json");
-    std::fs::write(
-        path,
-        serde_json::to_vec(&data).expect("Failed to serialize save file."),
-    )
-    .expect("Failed to save.");
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let data = SaveDate { score: score };
+        let path = dirs::data_local_dir()
+            .expect("Local data dir not found.")
+            .join("Wall 2 Wall");
+        std::fs::create_dir_all(&path).expect("Failed to create dir.");
+        let path = path.join("save.json");
+        std::fs::write(
+            path,
+            serde_json::to_vec(&data).expect("Failed to serialize save file."),
+        )
+        .expect("Failed to save.");
+    }
 }
 fn spawn_main_ball() -> Ball {
     Ball {
@@ -229,7 +247,7 @@ fn spawn_main_ball() -> Ball {
         radius: MAIN_BALL_RADIUS,
         color: RED,
         velocity: vec2(0., -3.),
-        mass: 2.,
+        mass: MAIN_BALL_MASS,
         in_bound: true,
     }
 }
@@ -246,14 +264,13 @@ impl Ball {
     fn draw(&self) {
         draw_circle(self.center.x, self.center.y, self.radius, self.color);
     }
-    fn move_kinematic(&mut self) {
-        const GRAVITY: f32 = 70.;
+    fn move_kinematic(&mut self, gravity: f32) {
         let Vec2 { x, y } = self.velocity;
-        let y = y + GRAVITY * get_frame_time() / 2.;
+        let y = y + gravity * get_frame_time() / 2.;
 
         self.velocity = vec2(x, y);
         self.center += self.velocity * get_frame_time();
-        let y = y + GRAVITY * get_frame_time() / 2.;
+        let y = y + gravity * get_frame_time() / 2.;
         self.velocity = vec2(x, y);
     }
     fn bounce_walls(&mut self) {
@@ -283,12 +300,15 @@ impl Ball {
         let dir = self.center - other.center;
         let dir = dir.normalize();
 
-        // self.center -= dir * strength / 2.;
-        // other.center += dir * strength / 2.;
+        self.center -= dir * strength / 2.;
+        other.center += dir * strength / 2.;
 
-        let total_mass = self.mass + other.mass;
+        let u1 = self.velocity;
+        let u2 = other.velocity;
+        let m1 = self.mass;
+        let m2 = other.mass;
 
-        self.velocity -= strength * dir * (total_mass / self.mass) * 2. ;
-        other.velocity += strength * dir * (total_mass / other.mass) * 2. ;
+        self.velocity = ((m1 - m2) / (m1 + m2)) * u1 + ((2. * m2) / (m1 + m2)) * u2;
+        other.velocity = ((m2 - m1) / (m1 + m2)) * u2 + ((2. * m1) / (m1 + m2)) * u1;
     }
 }

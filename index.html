@@ -1,0 +1,53 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Wall 2 Wall</title>
+    <style>
+        html{
+            
+            margin: 0px;
+            padding: 0px;
+            z-index: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        body {
+            overflow: hidden;
+            position: relative;
+            background: black;
+            z-index: 0;
+            
+            margin: 0px;
+            padding: 0px;
+            margin: auto;
+            
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 800px;
+            height: 600px;
+        }
+
+        canvas {
+            padding: 0px;
+            height: 100%;
+            width: 100%;
+
+            overflow: hidden;
+            position: absolute;
+            background: black;
+            z-index: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="glcanvas" tabindex='1'></canvas>
+    <!-- Minified and statically hosted version of https://github.com/not-fl3/macroquad/blob/master/js/mq_js_bundle.js -->
+    <script src="https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js"></script>
+    <script>load("target\\wasm32-unknown-unknown\\debug\\Wall2Wall.wasm");</script> <!-- Your compiled wasm file -->
+</body>
+
+</html>
