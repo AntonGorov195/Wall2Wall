@@ -44,6 +44,8 @@ fn window_conf() -> Conf {
 async fn main() {
     // to build wasm
     // cargo build --target wasm32-unknown-unknown
+    // cargo install basic-http-server
+    // basic-http-server .
     let mut score: u32 = 0;
     let mut best_score = load();
     let mut balls: Vec<Ball> = vec![];
@@ -183,7 +185,7 @@ async fn main() {
 
         draw_rectangle_ex(
             canon_pos.x,
-            canon_pos.y ,
+            canon_pos.y,
             25.,
             128.,
             DrawRectangleParams {
@@ -238,8 +240,7 @@ fn save(score: u32) {
         .expect("Failed to save.");
     }
     #[cfg(target_family = "wasm")]
-    {
-    }
+    {}
 }
 fn spawn_main_ball() -> Ball {
     Ball {
