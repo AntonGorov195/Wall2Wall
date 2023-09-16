@@ -35,8 +35,9 @@ fn window_conf() -> Conf {
     Conf {
         window_title: "Wall 2 Wall".to_owned(),
         fullscreen: false,
-        window_height: 900,
-        window_width: 1200,
+        window_height: 600,
+        window_width: 800,
+        window_resizable: false,
         ..Default::default()
     }
 }
@@ -69,8 +70,51 @@ async fn main() {
     println!("{:?}", screen_width());
     let mut main_ball: Ball = spawn_main_ball();
     let mut show_message = true;
+    let mut is_paused = false;
+    let mut angle = canon_angle(canon_pos);
+
     loop {
-        let angle = canon_angle(canon_pos);
+        // check pause
+        if is_mouse_button_pressed(MouseButton::Left) {
+            let has_changed = handle_pause();
+            is_paused = is_paused != has_changed;
+            // We skip frame so that the canon won't shot when unpausing.
+            if has_changed {
+                draw(
+                    score,
+                    best_score,
+                    main_ball,
+                    &balls,
+                    left_rect,
+                    right_rect,
+                    ceiling,
+                    is_paused,
+                    show_message,
+                    canon_pos,
+                    angle,
+                );
+                next_frame().await;
+                continue;
+            }
+        }
+        if is_paused {
+            draw(
+                score,
+                best_score,
+                main_ball,
+                &balls,
+                left_rect,
+                right_rect,
+                ceiling,
+                is_paused,
+                show_message,
+                canon_pos,
+                angle,
+            );
+            next_frame().await;
+            continue;
+        }
+        angle = canon_angle(canon_pos);
         if is_mouse_button_pressed(MouseButton::Left) {
             let new_ball = Ball {
                 center: canon_pos,
@@ -154,49 +198,102 @@ async fn main() {
                 ball.bounce_balls(other);
             }
         }
-
-        clear_background(Color {
-            r: 0.9,
-            g: 0.9,
-            b: 0.9,
-            a: 1.,
-        });
-        if show_message {
-            draw_text(
-                "Have the red ball hit the green wall to earn points.",
-                100.,
-                250.,
-                28.,
-                Color::new(0., 0., 0., 0.4),
-            );
-        }
-        draw_text(&score.to_string(), 200., 200., 64., BLACK);
-        let text = "Best score: ".to_owned() + &best_score.to_string();
-        draw_text(&text, 200., 300., 64., BLACK);
-        left_rect.draw();
-        right_rect.draw();
-        ceiling.draw();
-
-        main_ball.draw();
-
-        for ball in &balls {
-            ball.draw();
-        }
-
-        draw_rectangle_ex(
-            canon_pos.x,
-            canon_pos.y,
-            25.,
-            128.,
-            DrawRectangleParams {
-                offset: vec2(0.5, 0.),
-                color: WHITE,
-                rotation: angle,
-                ..Default::default()
-            },
+        draw(
+            score,
+            best_score,
+            main_ball,
+            &balls,
+            left_rect,
+            right_rect,
+            ceiling,
+            is_paused,
+            show_message,
+            canon_pos,
+            angle,
         );
         next_frame().await
     }
+}
+fn handle_pause() -> bool {
+    let pos = mouse_position();
+    if 50. < pos.0 && pos.0 < 100. && 50. < pos.1 && pos.1 < 100. {
+        return true;
+    }
+    return false;
+}
+fn draw_pause(is_paused: bool) {
+    const PAUSE_BTN_COLOR: Color = Color::new(0., 0., 0., 0.4);
+    // draw pause
+    draw_rectangle(50., 50., 50., 50., Color::from_rgba(0, 0, 0, 50));
+    if is_paused {
+        draw_triangle(
+            vec2(60., 55.),
+            vec2(60., 95.),
+            vec2(90., 75.),
+            PAUSE_BTN_COLOR,
+        );
+        draw_rectangle(250., 208., 335., 128., Color::new(0., 0., 0., 0.4));
+        draw_text("Paused", 250., 300., 128., Color::new(1., 0.6, 0.6, 1.));
+        return;
+    }
+    draw_rectangle(60., 55., 10., 40., PAUSE_BTN_COLOR);
+    draw_rectangle(80., 55., 10., 40., PAUSE_BTN_COLOR);
+    return;
+}
+fn draw(
+    score: u32,
+    best_score: u32,
+    main_ball: Ball,
+    balls: &Vec<Ball>,
+    left_rect: Rect,
+    right_rect: Rect,
+    ceiling: Rect,
+    is_paused: bool,
+    show_message: bool,
+    canon_pos: Vec2,
+    angle: f32,
+) {
+    clear_background(Color {
+        r: 0.9,
+        g: 0.9,
+        b: 0.9,
+        a: 1.,
+    });
+    if show_message {
+        draw_text(
+            "Have the red ball hit the green wall to earn points.",
+            100.,
+            250.,
+            28.,
+            Color::new(0., 0., 0., 0.4),
+        );
+    }
+    draw_text(&score.to_string(), 200., 200., 64., BLACK);
+    let text = "Best score: ".to_owned() + &best_score.to_string();
+    draw_text(&text, 200., 300., 64., BLACK);
+    left_rect.draw();
+    right_rect.draw();
+    ceiling.draw();
+
+    main_ball.draw();
+
+    for ball in balls {
+        ball.draw();
+    }
+
+    draw_rectangle_ex(
+        canon_pos.x,
+        canon_pos.y,
+        25.,
+        128.,
+        DrawRectangleParams {
+            offset: vec2(0.5, 0.),
+            color: WHITE,
+            rotation: angle,
+            ..Default::default()
+        },
+    );
+    draw_pause(is_paused);
 }
 fn increment_score(score: &mut u32, best_score: &mut u32) {
     *score += 1;
@@ -237,12 +334,16 @@ fn load() -> u32 {
     0
 }
 fn save(score: u32) {
-    
     #[cfg(target_family = "wasm")]
     {
         let storage = &mut quad_storage::STORAGE.lock().unwrap();
         let data = SaveDate { score: score };
-        storage.set("save",serde_json::to_string(&data).expect("Failed to serialize save.").as_str());
+        storage.set(
+            "save",
+            serde_json::to_string(&data)
+                .expect("Failed to serialize save.")
+                .as_str(),
+        );
     }
     #[cfg(not(target_family = "wasm"))]
     {
@@ -258,7 +359,6 @@ fn save(score: u32) {
         )
         .expect("Failed to save.");
     }
-    
 }
 fn spawn_main_ball() -> Ball {
     Ball {
