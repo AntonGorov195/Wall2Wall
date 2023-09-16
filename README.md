@@ -1,14 +1,14 @@
-<h1>Wall 2 Wall</h1> 
-A port of a game I made a long time in unity. 
-This time it is written in the [Rust](https://www.rust-lang.org) programming language, with the help of the [Macroquad](https://docs.rs/macroquad/latest/macroquad) crate.
+# Wall 2 Wall
+A port of a game I made a long time in [Unity](https://unity.com/). 
+This time it is written in the [Rust](https://www.rust-lang.org/) programming language, with the help of the [Macroquad](https://docs.rs/macroquad/latest/macroquad/) crate.
 While Macroquad handled the rendering and the event loop of the game, I had to implement my own collision system.
 Said system ended up being very simple and suited exacly for this game.
 This was a fun little project which taught me many important concepts like:
 
-- A different work flow from unity engine.
-- The basics of how to use wasm in rust.
-- How to upload a game on itch.io.
 - Basic collision system.
+- A different work flow from the one inforced in Unity.
+- The basics of how to use wasm in Rust.
+- How to upload a game on itch.io.
 
 Overall, I'm proud of this creation although there is a lot of room for improvement such as:
 
