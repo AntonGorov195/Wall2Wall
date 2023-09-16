@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <title>Wall 2 Wall</title>
     <style>
-        html{
-            
+        html {
+
             margin: 0px;
             padding: 0px;
             z-index: 0;
@@ -13,16 +13,17 @@
             justify-content: center;
             align-items: center;
         }
+
         body {
             overflow: hidden;
             position: relative;
             background: black;
             z-index: 0;
-            
+
             margin: 0px;
             padding: 0px;
             margin: auto;
-            
+
             display: flex;
             justify-content: center;
             align-items: center;
@@ -46,6 +47,8 @@
 <body>
     <canvas id="glcanvas" tabindex='1'></canvas>
     <script src="https://not-fl3.github.io/miniquad-samples/mq_js_bundle.js"></script>
+    <script src="sapp_jsutils.js"></script>
+    <script src="quad-storage.js"></script>
     <script>load("target\\wasm32-unknown-unknown\\debug\\Wall2Wall.wasm");</script> <!-- Your compiled wasm file -->
 </body>
 

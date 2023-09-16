@@ -40,12 +40,12 @@ fn window_conf() -> Conf {
         ..Default::default()
     }
 }
+// to build wasm
+// cargo build --target wasm32-unknown-unknown
+// cargo install basic-http-server
+// basic-http-server .
 #[macroquad::main(window_conf)]
 async fn main() {
-    // to build wasm
-    // cargo build --target wasm32-unknown-unknown
-    // cargo install basic-http-server
-    // basic-http-server .
     let mut score: u32 = 0;
     let mut best_score = load();
     let mut balls: Vec<Ball> = vec![];
@@ -206,6 +206,18 @@ fn increment_score(score: &mut u32, best_score: &mut u32) {
     }
 }
 fn load() -> u32 {
+    #[cfg(target_family = "wasm")]
+    {
+        let storage = &mut quad_storage::STORAGE.lock().unwrap();
+        let Some(data) = storage.get("save") else {
+            return 0;
+        };
+
+        let data: SaveDate =
+            serde_json::from_str(data.as_str()).expect("Failed to deserialize save file.");
+
+        return data.score;
+    }
     #[cfg(not(target_family = "wasm"))]
     {
         let data = dirs::data_local_dir()
@@ -216,7 +228,7 @@ fn load() -> u32 {
         match data {
             Ok(data) => {
                 let data: SaveDate =
-                    serde_json::from_slice(&data).expect("Failed to deserialize save file.");
+                    serde_json::from_slice(&data).expect("Failed to deserialize save.");
                 return data.score;
             }
             Err(_) => return 0,
@@ -225,6 +237,13 @@ fn load() -> u32 {
     0
 }
 fn save(score: u32) {
+    
+    #[cfg(target_family = "wasm")]
+    {
+        let storage = &mut quad_storage::STORAGE.lock().unwrap();
+        let data = SaveDate { score: score };
+        storage.set("save",serde_json::to_string(&data).expect("Failed to serialize save.").as_str());
+    }
     #[cfg(not(target_family = "wasm"))]
     {
         let data = SaveDate { score: score };
@@ -239,8 +258,7 @@ fn save(score: u32) {
         )
         .expect("Failed to save.");
     }
-    #[cfg(target_family = "wasm")]
-    {}
+    
 }
 fn spawn_main_ball() -> Ball {
     Ball {
