@@ -1,6 +1,4 @@
-use std::{env, f32::consts::PI, time::Duration};
-//
-use macroquad::{miniquad::window::set_window_size, prelude::*, window};
+use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 const WALL_THICKNESS: f32 = 30.;
 const MAIN_BALL_RADIUS: f32 = 50.;
@@ -44,6 +42,8 @@ fn window_conf() -> Conf {
 }
 #[macroquad::main(window_conf)]
 async fn main() {
+    // to build wasm
+    // cargo build --target wasm32-unknown-unknown
     let mut score: u32 = 0;
     let mut best_score = load();
     let mut balls: Vec<Ball> = vec![];
@@ -67,10 +67,6 @@ async fn main() {
     println!("{:?}", screen_width());
     let mut main_ball: Ball = spawn_main_ball();
     let mut show_message = true;
-    let canon_texture = Texture2D::from_image(
-        &Image::from_file_with_format(include_bytes!("../assets/canon.png"), None)
-            .expect("failed to load image"),
-    );
     loop {
         let angle = canon_angle(canon_pos);
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -185,14 +181,15 @@ async fn main() {
             ball.draw();
         }
 
-        draw_texture_ex(
-            &canon_texture,
-            canon_pos.x - 50.,
-            canon_pos.y - 128.,
-            WHITE,
-            DrawTextureParams {
-                rotation: PI + angle,
-                dest_size: Some(vec2(100., 200.)),
+        draw_rectangle_ex(
+            canon_pos.x,
+            canon_pos.y ,
+            25.,
+            128.,
+            DrawRectangleParams {
+                offset: vec2(0.5, 0.),
+                color: WHITE,
+                rotation: angle,
                 ..Default::default()
             },
         );
@@ -239,6 +236,9 @@ fn save(score: u32) {
             serde_json::to_vec(&data).expect("Failed to serialize save file."),
         )
         .expect("Failed to save.");
+    }
+    #[cfg(target_family = "wasm")]
+    {
     }
 }
 fn spawn_main_ball() -> Ball {
@@ -305,8 +305,7 @@ impl Ball {
 
         let total_mass = self.mass + other.mass;
 
-        self.velocity -= strength * dir * (total_mass / self.mass) * 2. ;
-        other.velocity += strength * dir * (total_mass / other.mass) * 2. ;
-    
+        self.velocity -= strength * dir * (total_mass / self.mass) * 2.;
+        other.velocity += strength * dir * (total_mass / other.mass) * 2.;
     }
 }
