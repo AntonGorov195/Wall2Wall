@@ -19,4 +19,4 @@ Overall, I'm proud of this creation although there is a lot of room for improvem
 - Sound.
 
 Maybe one day I will come back to add these thing but that is enough for now.
-I have many other Ideas for cool projects which I can't wait and do.
+I have many other ideas for cool projects which I can't wait and do.
